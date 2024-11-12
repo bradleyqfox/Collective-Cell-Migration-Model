@@ -1,0 +1,452 @@
+% Two-Cell System with different cell types (Neural Crest Cell and Placodal
+% Cell
+
+function [] = Two_cell_system_solved
+
+close all;
+clearvars; % Changed from 'clear all' for performance
+tic
+a = 2;%1;%0.01; % outside Sn exp. term %%%% 2
+cN = 1;%0.1; % SD for signal NS  %%%% 4
+
+% b is signal max value for same-cell interactions
+b = a;%0.01;%0.00001;%0.5; % outside Sp exp. term %%%% 4
+cP = cN; % SD for signal PS %%%% 2
+r = 0.894;                          %unnecessary???
+VN = 0.5 ; % sin term for Xn speed of Xn
+thNP = 0.08;%0.08;%0.04;%0.4;%0.7*a; % signal root for FNPS %%%% 1
+selfSgnl = false;
+f = thNP^2/8; % half saturation for N %%%% .01
+vP = 1.5;%0.2; % speed of Yp
+thPN = 0.04;%0.04;%.08; % signal root for FPNS %%%% .5
+j = 0;%1; %                         %unnecessary???
+k = thPN^2/8; % half saturation for P %%%% .1
+wN = 0.8;%1;%0.9;%1%0.8; %0;%0.8;
+wP = 0.9;%0.8;%0.8;%1;%0.9;%1;%0.8; %0;%0.8;
+
+mult = 1.5;
+
+boundary = 0; % Setting for circular (0) vs rectangle (1) boundary
+wdth = 12;
+lgth = 12;
+thNN = 0.01;
+thPP = 0.01;
+actSeq=1;
+
+rad = mult*5; % Radius of circular boundary
+
+
+% Time-span to solve system over
+dt = 1;
+tEnd = 20000;%5000;
+
+% Initial positions (x,y of NCC and P cell)
+% Xn0 = [2,   4, 5,   5, 7]; % [2,3]; 6
+% Yn0 = [8.5, 5, 2,   7, 3]; % [9,7]; 8
+% Xp0 = [5,   7, 6.5, 3, 2]; %2
+% Yp0 = [8,   6, 1,   3, 8]; %8
+
+
+%% BAD -- lots of cells
+%{
+Xn0a = [1,2,3,4,1,2,3,4,1,2,3,4];%[1,2];%
+Yn0a = [6.01,5.99,6.0023,6,5.1,5.002,4.975,5,4.01,4,4.03,4];%[6,5];%
+Xn0b = [(3-Xn0a)/5+3,(3-Xn0a)/5+3.85,(3-Xn0a)/5+3.85+.85];
+Yn0b = [(5-Yn0a)/5+5,(5-Yn0a)/5+5,(5-Yn0a)/5+5];
+Xn0c = [Xn0b,Xn0b,Xn0b];
+Yn0c = [Yn0b+.6,Yn0b,Yn0b-.6];
+Xn0  = [Xn0c,Xn0c,Xn0c];
+Yn0  = [Yn0c+2,Yn0c,Yn0c-2];
+Xp0 = [2,3,3,2];
+Yp0 = [2,1,3,4];
+ncsOnly = false;
+%}
+%% Group displacement initial positions
+
+nNcells = 1;
+nPcells = 1;
+
+% Xn0 = 6;
+% Yn0 = 8;
+% Xp0 = 5;
+% Yp0 = 7;
+
+Xn0 = 5;
+Yn0 = 9;
+Xp0 = 5;
+Yp0 = 8;
+
+
+
+ ncsOnly = false;
+tEnd = 5000;
+ aSeq=repelem(0,length(Xn0));
+mult = 1;
+boundary = 0;
+rad = mult*5; % Radius of circular boundary
+
+%% NCs only initial positions
+%{
+Ntot = 20;
+XDIST = 1;
+Xn0 = XDIST * rand(1,Ntot) + 5 - XDIST*0.5;
+Yn0 = XDIST * rand(1,Ntot) + 5 - XDIST*0.5;
+
+Xp0 = [2,3];
+Yp0 = [2,1];
+ncsOnly = true;
+aSeq=repelem(0,length(Xn0));
+boundary = 0;
+%}
+%% Barriga modeling-initial positions
+%{
+ndiv=20;
+Ntot = 1;%ceil(15/ndiv);
+XDIST = 0.5;
+YDIST = 0.5;
+Xn0=[XDIST*rand(1,Ntot)+4,-1*XDIST*rand(1,Ntot)+6];
+Yn0=[YDIST*rand(1,Ntot)+5];
+Yn0=[Yn0,Yn0,Yn0-1.5, Yn0-1.5,Yn0+1.5, Yn0+1.5];
+Xn0 = [Xn0,Xn0,Xn0];
+
+%Xn0=XDIST*rand(1,Ntot)+4.5+1.5;
+%Yn0=YDIST*rand(1,Ntot)+5+2;
+
+Ntot = 20;
+XDIST = 1;
+YDIST = 5;
+Xp0=[XDIST*rand(1,Ntot)+2.7,XDIST*rand(1,Ntot)+6.3,(6.3+XDIST-2.7)*rand(1,Ntot)+2.7];
+Yp0=[YDIST*rand(1,Ntot)+3,YDIST*rand(1,Ntot)+3,XDIST*rand(1,Ntot)+8];
+%Xp0 = [1.3,2];%[10-Xn0,      3,5,7,3,5,7];%   3;% 4+[3,4];
+%Yp0 = [3.5,3];%[(Yn0-5).*2+5,2,2,2,8,8,8];%   5;% [5,5];
+%length(Xn0)
+
+if actSeq
+    nNcells=width(Xn0);
+    Xn0 = repelem(Xn0,ndiv);%2);
+    Yn0 = repelem(Yn0,ndiv);%,2);
+    %aSeq = repelem(0,nNcells);
+    aSeq=repmat(100/ndiv*[0:ndiv-1],[1,nNcells]);
+    %size(aSeq)
+    %aSeq = 400*rand(1,nNcells);%,2*nNcells);
+else
+    aSeq=repelem(0,nNcells);
+end
+ncsOnly = false;
+boundary = 0;
+%}
+
+% Calculating numbers of cells
+nNcells=width(Xn0);
+nPcells=width(Xp0);
+% Setting up initial vector
+x0 = mult*[Xn0,Yn0,Xp0,Yp0];
+
+% Time-span to solve over
+tspan = 0:dt:tEnd;
+% Line width
+lw = 2;
+
+% If only paying attention to NCs,
+%  P's remain still and don't produce much signal.
+if (ncsOnly)
+    vP = 0;
+    a = 0.0001;
+end
+
+% Plotting initial positions
+figure(6)
+    hold on;
+    axis equal;
+    % Neural initial positions
+    plot(mult*Xn0, mult*Yn0,'ro', LineWidth=lw);
+    % Placodes initial positions
+    if ncsOnly == false
+        plot(mult*Xp0, mult*Yp0,'bs',LineWidth=lw);
+    end
+
+    %for i=1:nPcells
+    %    plot(Xp(length(Xp),i), Yp(length(Xp),i), 'bo');
+    %end
+    %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
+    %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
+    
+    set(gca,'fontsize',20)
+    xlabel('x-axis position')% coord')
+    ylabel('y-axis position')% coord')
+    xlim([0 10])
+    ylim([0 10])
+      if not(boundary)
+          pos = [0 0 2*rad 2*rad];
+          rect = rectangle('Position',pos,'Curvature',[1 1],LineWidth=lw);
+      end
+    set(gca,'fontsize',10)
+    %title('ncs only initial conditions')
+    if ncsOnly == false
+        legend(["NC cell",'P cell']) %repelem("",nNcells)
+    end
+    if ncsOnly == true
+        legend("NC cell")
+    end
+     saveas(gcf,'SuppFigA','epsc')
+    
+
+%% --- Solving ODE --- %%
+
+parameter_vector = [cN cP a b r VN thNP selfSgnl f vP thPN ncsOnly k,wN,wP,rad,boundary,wdth,lgth,thNN, thPP, nNcells,nPcells,aSeq];
+[t,x] = ode45(@Two_cell_system, tspan, x0, [], parameter_vector);
+%ode23s
+
+%% Re-slicing x into Xn, Yn, Xp, and Yp
+xnmax = nNcells;
+ynmax = xnmax + nNcells;
+xpmax = ynmax + nPcells;
+ypmax = xpmax + nPcells;
+Xn = x(:,1:xnmax);
+Yn = x(:,xnmax+1:ynmax);
+Xp = x(:,ynmax+1:xpmax);
+Yp = x(:,xpmax+1:ypmax);
+
+toc
+disp("Done simulating")
+tic
+
+%% Find NC cell density
+%{
+MINS=zeros(1,nNcells);
+for i=1:nNcells
+    dists = zeros(1,nNcells-1);
+    if i > 1
+        dists(1:i-1) = sqrt( (Xn(length(Xn(:,1)),i)-Xn(length(Xn(:,1)),1:i-1)).^2 + ...
+            (Yn(length(Xn(:,1)),i)-Yn(length(Xn(:,1)),1:i-1)).^2   );
+    end
+    if i < nNcells
+        dists(i:nNcells-1) = sqrt( (Xn(length(Xn(:,1)),i)-Xn(length(Xn(:,1)),i+1:nNcells)).^2 + ...
+            (Yn(length(Xn(:,1)),i)-Yn(length(Xn(:,1)),i+1:nNcells)).^2   );
+    end
+    %min(dists)
+    %size(dists)
+    MINS(i)=min(dists);
+end
+%MINS
+mean(MINS)
+std(MINS)
+%}
+%% --- Plotting the results --- %%
+% close all;
+
+% tt = strcat('dt: ',num2str(dt));
+
+%% Phase portrait
+figure(1)
+    hold on;
+    axis equal;
+    % Plot NC cells through time
+    for i=1:nNcells
+        plot(Xn(:,i), Yn(:,i),'ro');%,LineWidth=lw);
+    end
+    % Plot P cells through time
+    if ncsOnly == false
+        for i=1:nPcells
+            plot(Xp(:,i), Yp(:,i), 'bs');%,LineWidth=lw);
+        end
+    end
+    set(gca,'fontsize',20)
+    xlabel('x-axis position')% coord')
+    ylabel('y-axis position')% coord')
+    % If it's a circle, not rectangle boundary,
+    %  plot it.
+    %if not(boundary)
+        %pos = [0 0 2*rad 2*rad];
+        %rectangle('Position',pos,'Curvature',[1 1], LineWidth=lw);
+    %end
+    set(gca,'fontsize',10)
+    %title(tt)
+    % Add legend
+    if ncsOnly == true
+        legend("N cell")
+    end
+    if ncsOnly == false
+        legend(["NC cell",'P cell'])
+    end
+    saveas(gcf,'SuppFigB','epsc')
+
+
+% figure(2)
+%  plot(t, FPNS,'k'); 
+%  hold on;
+%  plot(t, FNPS,'b');
+% xlabel('t')
+% ylabel('responses')
+% legend('FPNS', 'FNPS')
+
+%% x coords
+figure(2)
+    hold on;
+    % Plot NC x coords
+    for i=1:nNcells
+        plot(t, Xn(:,i),'r', LineWidth=lw);
+    end
+    if ncsOnly == false
+        for i=1:nPcells
+            plot(t, Xp(:,i),'b',LineWidth=lw);
+        end
+    end
+    xlabel('Time')
+    ylabel('x-axis position')% coord')
+    if ncsOnly == false
+        legend(["NC Cell",'P Cell'])
+    end
+    if ncsOnly == true
+        legend("Xn")
+    end
+    saveas(gcf,'SuppFigD','epsc')
+%title(tt)
+
+%% y coords
+figure(3)
+    hold on;
+    % Plot NCs
+    for i=1:nNcells
+        plot(t, Yn(:,i),'r', LineWidth=lw);
+    end
+    % Plot P cells
+    if ncsOnly == false
+        for i=1:nPcells
+            plot(t, Yp(:,i),'b', LineWidth=lw);
+        end
+    end
+    % Label axes
+    xlabel('Time')
+    ylabel('y-axis position')% coord')
+    % Plot legend
+    if ncsOnly == false
+        legend(["NC Cell",'P Cell'])
+    end
+    if ncsOnly == true
+        legend("Yn")
+    end
+    saveas(gcf,'SuppFigE','epsc')
+    %title(tt)
+
+% Optional distance graph -- for when only two cells are involved:
+% dists=sqrt((Xn-Xp).^2+(Yn-Yp).^2);
+
+% figure(4)
+%  hold on;
+%  for i=1:sw
+%   plot(t, dists(:,i),'r');
+%  end
+% xlabel('t')
+% ylabel('dist')
+
+%% Final positions
+figure(5)
+    hold on;
+    axis equal;
+    % Plot NCs
+    for i=1:nNcells
+        plot(Xn(length(Xn(:,1)),i), Yn(length(Xn(:,1)),i),'ro',LineWidth=lw);
+    end
+    % Plot Ps
+    if ncsOnly == false
+        for i=1:nPcells
+            plot(Xp(length(Xp(:,1)),i), Yp(length(Xp(:,1)),i), 'bs',LineWidth=lw);
+        end
+    end
+    %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
+    %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
+    
+    % Aesthetics
+    set(gca,'fontsize',20)
+    xlabel('x')% coord')
+    ylabel('y')% coord')
+    if not(boundary)
+        pos = [0 0 2*rad 2*rad];
+        rectangle('Position',pos,'Curvature',[1 1],LineWidth=lw);
+    end
+    set(gca,'fontsize',10)
+    %title(tt)
+    % Add a Legend
+    if ncsOnly == false
+        legend(["N cell",repelem("",nNcells+1),'P cell'])
+    end
+    if ncsOnly == true
+        legend("N cell")
+    end
+
+%% 8-step Logarithmic Sampling of Process
+if (not(ncsOnly)) % not necessary if NCs are only ones?
+    f7 = figure(7);
+        ax = gcf;
+        % Define arrangement of tiles for each time
+        n = 4;
+        m = 2;
+        % Find timesteps
+        tstp=nthroot(tEnd,m*n);%tEnd/m/n;
+        %title("Simulation NC cells forming streams that"+ ...
+        %"invade surrounding placodes")
+        pbaspect([6 2 1])
+        % Loop through each frame
+        tiledlayout(m,n);
+        for i=1:m*n
+            % Calculate actual time from frame-number and timestep
+            T1 = floor(tstp^i);
+            %axsub{i} = subplot(m,n,i);
+            nexttile;
+                pbaspect(gca, [1 1 1])
+                hold on;
+                axis equal;
+                for j=1:nNcells
+                    plot(gca, Xn(T1,j), Yn(T1,j),'ro',LineWidth=lw);
+                    %plot(axsub{i}, Xn(T1,j), Yn(T1,j),'ro',LineWidth=lw);
+                end
+                if ncsOnly == false
+                    for j=1:nPcells
+                        plot(gca, Xp(T1,j), Yp(T1,j), 'bs',LineWidth=lw);
+                        %plot(axsub{i}, Xp(T1,j), Yp(T1,j), 'bs',LineWidth=lw);
+                    end
+                end
+                %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
+                %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
+                %set(gca, 'fontsize',20)
+                %set(axsub{i}, 'fontsize',20)
+                xlabel('x')% coord')
+                %xlabel(axsub{i}, 'x')% coord')
+                ylabel('y')% coord')
+                %ylabel(axsub{i}, 'y')% coord')
+                if not(boundary)
+                    pos = [0 0 2*rad 2*rad];
+                    rectangle(gca, 'Position',pos,'Curvature',[1 1],LineWidth=lw);
+                    %rectangle(axsub{i}, 'Position',pos,'Curvature',[1 1],LineWidth=lw);
+                end
+                set(gca, 'fontsize',14)
+                %set(axsub{i}, 'fontsize',10)
+                title(gca, strcat('t=',num2str(T1)))
+                %title(axsub{i}, strcat('t=',num2str(T1)))
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        end
+        if ncsOnly == false
+            legend(["N cell",repelem("",nNcells+1),'P cell'])
+        end
+        if ncsOnly == true
+            legend("N cell")
+        end
+end
+
+%contained = 1;
+%for i = 1:nNcells
+%    if ((Xn(i)-(5+XDIST)/2)^2 + (Yn(i)-(5+XDIST)/2)^2 > 1)
+%        contained = 0;
+%    end
+%end
+%contained
+
+
+%% Finally, save the data to a csv
+out=[t,Xn,Yn,Xp,Yp];
+writematrix(out);
+% Take time measurement
+toc
+disp("Done plotting")
+end
