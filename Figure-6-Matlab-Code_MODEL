@@ -1,0 +1,158 @@
+function dxdt = TESTCell_System_ODEsdw(t, x, par)
+
+% Interpret parameter vector
+cN = par(1); % SD for NC signal
+cP = par(2); % SD for P signal
+a = par(3); % Outside Sn exp term (max strength of signal)
+b = par(4); % Outside Sp exp term (max strength of signal)
+%r = par(5); % assuming identical for each cell, for now (easy fix)
+vN = par(6); % speed of N
+thNP = par(7); % signal root for FNPS
+%e = par(8);
+f = par(9); % half saturation for N
+vP = par(10); % speed of P
+thPN = par(11); % signal root for FPNS
+%j = par(12);
+k = par(13); % half saturation for P
+wN = par(14); % 'weighting' of Neural signals
+              % (ratio representing how much N pays attention to P)
+wP = par(15); % weighting of Placodal signals (ratio)
+
+% Settings for the boundary
+rad = par(16);
+boundary = par(17);
+wdth = par(18);
+hght = par(19);
+thNN = par(20);
+thPP = par(21);
+nNcells = par(22);
+nPcells = par(23);
+
+EXP = 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Taking slices of x corresponding to Xn, Yn, Xp, Yp
+xnmax = nNcells;
+ynmax = xnmax + nNcells;
+xpmax = ynmax + nPcells;
+ypmax = xpmax + nPcells;
+Xn = x(1:xnmax);
+Yn = x(xnmax+1:ynmax);
+Xp = x(ynmax+1:xpmax);
+Yp = x(xpmax+1:ypmax);
+
+% Signal produced by N
+% dxdt(1) = a*exp(-((Xp - Xn).^2 + (Yp - Yn).^2)./cN);%why is this a derivative? negative sign?
+NSt = zeros(nPcells,1);
+NSgrad = zeros(nPcells,2);
+for i = 1:nNcells
+ NS = a*exp(-((Xp - Xn(i)).^2 + (Yp - Yn(i)).^2).^EXP./abs(cN));%grad at Xn,Yn is NS*(2(Xp-Xn)/cN, 2(Yp-Yn)/cN)
+ NSt = NSt + NS;
+ NSgrad = NSgrad - NS.*[2*(Xp-Xn(i))./cN, 2*(Yp-Yn(i))./cN];
+end
+PPSt= zeros(nPcells,1);
+PPSgrad = zeros(nPcells,2);
+for i = 1:nPcells
+ PPSmult = zeros(nPcells,1);
+ PPSmult(i) = 1;
+ NS = (1-PPSmult).*b.*exp(-((Xp - Xp(i)).^2 + (Yp - Yp(i)).^2).^EXP./abs(cP));%grad at Xn,Yn is NS*(2(Xp-Xn)/cN, 2(Yp-Yn)/cN)
+ PPSt = PPSt + (1-PPSmult).*NS;
+ PPSgrad = PPSgrad - NS.*[2*(Xp-Xp(i))./cP, 2*(Yp-Yp(i))./cP];
+end
+
+%Signal produced by P
+% dxdt(2) = b*exp(-((Xp - Xn).^2 + (Yp - Yn).^2)./cP);
+PSt = zeros(nNcells,1);
+PSgrad = zeros(nNcells,2);
+for i = 1:nPcells
+ PS = b*exp(-((Xp(i) - Xn).^2 + (Yp(i) - Yn).^2).^EXP./abs(cN)); %grad at  Xp,Yp is NP(-2(Xp-Xn)/cP, -2(Yp-Yn)/cP)
+ PSt = PSt + PS;
+ PSgrad = PSgrad - PS.*[2*(Xn-Xp(i))./cN, 2*(Yn-Yp(i))./cN];
+end
+NNSt = zeros(nNcells,1);
+NNSgrad = zeros(nNcells,2);
+for i = 1:nNcells
+ NNSmult = zeros(nNcells,1);
+ NNSmult(i) = 1;
+ PS = (1-NNSmult).*a.*exp(-((Xn(i) - Xn).^2 + (Yn(i) - Yn).^2).^EXP./abs(cP)); %grad at  Xp,Yp is NP(-2(Xp-Xn)/cP, -2(Yp-Yn)/cP)
+ NNSt = NNSt + (1-NNSmult).*PS;
+ NNSgrad = NNSgrad - PS.*[2*(Xn-Xn(i))./cP, 2*(Yn-Yn(i))./cP];
+end
+
+%FNP response of N to PS, FPN response of P to NS, dfhk free parameters now
+FNPS= wN*PSt.*(thNP-PSt)./(PSt.^2 +f);
+FPNS = wP*NSt.*(thPN-NSt)./(NSt.^2 +k);
+
+FNNS = (1-wN)*NNSt.*(thNN-NNSt)./(NNSt.^2 +f/64);
+FPPS = (1-wP)*PPSt.*(thPP-PPSt)./(PPSt.^2 +k/64);
+
+Ndir = units(PSgrad).*FNPS + units(NNSgrad).*FNNS;
+Pdir = units(NSgrad).*FPNS + units(PPSgrad).*FPPS;
+
+% Contain cells within box
+if boundary
+    Hxn=heaviside(Xn) - heaviside(Xn-wdth);
+    Hyn=heaviside(Yn) - heaviside(Yn-hght);
+    Hxp=heaviside(Xp) - heaviside(Xp-wdth);
+    Hyp=heaviside(Yp) - heaviside(Yp-hght);
+else
+    Hxn = 1;
+    Hyn = 1;
+    Hxp = 1;
+    Hyp = 1;
+end
+
+% Projection of gradient onto boundary
+Pproj = [Yp-rad, rad-Xp].*(Pdir(:,1).*(Yp-rad)-Pdir(:,2).*(Xp-rad))./((Xp-rad).^2+(Yp-rad).^2);
+Nproj = [Yn-rad,rad-Xn].*(Ndir(:,1).*(Yn-rad)-Ndir(:,2).*(Xn-rad))./((Xn-rad).^2+(Yn-rad).^2);
+
+% In circular context:
+if not(boundary)
+    % Heaviside for when NSgrad is on boundary
+    % Determines whether to include radial component of dxdt
+    Pheav = heaviside(Pdir(:,1)-Pproj(:,1)).*heaviside(5 - Xp)+heaviside(Pproj(:,1)-Pdir(:,1)).*heaviside(-5 + Xp);
+    %heaviside for when PSgrad is on boundary
+    Nheav = heaviside(Ndir(:,1)-Nproj(:,1)).*heaviside(5 - Xn)+heaviside(Nproj(:,1)-Ndir(:,1)).*heaviside(-5 + Xn);
+else
+    Pheav = 1;
+    Nheav = 1;
+end
+
+respN = vN.*(Nheav.*(Ndir - Nproj)+Nproj);
+boundsN = ((Xn-5).^2+(Yn-5).^2 > 25);
+respP = vP.*(Pheav.*(Pdir - Pproj)+Pproj);
+boundsP = ((Xp-5).^2+(Yp-5).^2 > 25);
+
+dxdt = [Hxn.*(boundsN.*respN(:,1)+(1-boundsN).*(vN.*Ndir(:,1)));...
+        Hyn.*(boundsN.*respN(:,2)+(1-boundsN).*(vN.*Ndir(:,2)));...
+        Hxp.*(boundsP.*respP(:,1)+(1-boundsP).*(vP.*Pdir(:,1)));...
+        Hyp.*(boundsP.*respP(:,2)+(1-boundsP).*(vP.*Pdir(:,2)))];
+if sum(dxdt) > 1000
+    for i=1
+        continue;
+    end
+end
+%NSproj, PSproj, PSgrad, x, dxdt
+end
+
+function y = heaviside(x)
+y=x;
+for i=1:width(x)*length(x)
+ if x(i) > 0
+     y(i) = 1;
+%  elseif x(i) == 0
+%      y(i) = 0.5;
+ else
+     y(i) = 0;
+ end
+end
+end
+
+function y = units(x)
+y=x;
+mag = sum(x.'.^2).';
+for i=1:length(mag)
+    if mag(i) == 0
+        y(i,:) = x(i,:)/mag(i);
+    end
+end
+end
