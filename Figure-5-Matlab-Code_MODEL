@@ -1,0 +1,204 @@
+function dxdt = Cell_System_ODEsdw2_copy(t, x, par)
+
+% Interpret parameter vector
+cN = par(1); % SD for NC signal
+cP = par(2); % SD for P signal
+a = par(3); % Outside Sn exp term (max strength of signal)
+b = par(4); % Outside Sp exp term (max strength of signal)
+%r = par(5); % assuming identical for each cell, for now (easy fix)
+vN = par(6); % speed of N
+thNP = par(7); % signal root for FNPS
+selfSgnl = par(8); % True = pay attention to self's sgnl, else don't
+f = par(9); % half saturation for N
+vP = par(10); % speed of P
+thPN = par(11); % signal root for FPNS
+ncsOnly = par(12);
+k = par(13); % half saturation for P
+wN = par(14); % 'weighting' of Neural signals
+              % (ratio representing how much N pays attention to P)
+wP = par(15); % weighting of Placodal signals (ratio)
+
+% Settings for the boundary
+rad = par(16);
+boundary = par(17);
+wdth = par(18);
+hght = par(19);
+thNN = par(20);
+thPP = par(21);
+nNcells = par(22);
+nPcells = par(23);
+aSeq = par(24:length(par));
+
+%EXP = 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+f2 = thNN^2 / 8;
+k2 = thPP^2 / 8;
+
+% Taking slices of x corresponding to Xn, Yn, Xp, Yp
+xnmax = nNcells;
+ynmax = xnmax + nNcells;
+xpmax = ynmax + nPcells;
+ypmax = xpmax + nPcells;
+Xn = x(1:xnmax);
+Yn = x(xnmax+1:ynmax);
+Xp = x(ynmax+1:xpmax);
+Yp = x(xpmax+1:ypmax);
+
+%% Calculate which cells are activated
+actvtd = aSeq <= t;
+
+%% Signal produced by P
+calcP = sgnlCalc(Xp,Yp,Xn,Yn,nPcells,nNcells,cN,a,b,selfSgnl,repelem(1,nPcells));
+% Collect outputs
+PSt = calcP{1}; % Total P-signal recv'd by N
+PSgrad = calcP{2}; % Gradient of P-signal recv'd by N
+PPSt = calcP{3}; % Total P-signal recv'd by P
+PPSgrad = calcP{4}; % Gradient of P-signal recv'd by P
+
+%% Signal produced by N
+calcN = sgnlCalc(Xn,Yn,Xp,Yp,nNcells,nPcells,cN,a,b,selfSgnl,actvtd);
+% Collect outputs
+NSt = calcN{1}; % Total N-signal recv'd by P
+NSgrad = calcN{2}; % Gradient of P-signal recv'd by N
+NNSt = calcN{3}; % Total N-signal recv'd by N
+NNSgrad = calcN{4}; % Gradient of P-signal recv'd by N
+
+
+%% Responses
+% FNPS response of N to PS
+FNPS= wN*PSt.*(thNP-PSt)./(PSt.^2 +f);
+% FPNS response of P to NS
+FPNS = wP*NSt.*(thPN-NSt)./(NSt.^2 +k);
+
+% FNNS response of N to NS
+FNNS = (1-wN)*NNSt.*(thNN-NNSt)./(NNSt.^2 +f2);
+% FPPS response of P to PS
+FPPS = (1-wP)*PPSt.*(thPP-PPSt)./(PPSt.^2 +k2);
+
+% fkf2k2 free parameters now
+
+% Turn response magnitudes into vectors and sum
+Ndir = units(PSgrad).*FNPS + units(NNSgrad).*FNNS;
+Pdir = units(NSgrad).*FPNS + units(PPSgrad).*FPPS;
+Ndir = actvtd.'.*Ndir;
+
+%% Contain cells within box
+if boundary
+    Hxn=heaviside(Xn) - heaviside(Xn-wdth);
+    Hyn=heaviside(Yn) - heaviside(Yn-hght);
+    Hxp=heaviside(Xp) - heaviside(Xp-wdth);
+    Hyp=heaviside(Yp) - heaviside(Yp-hght);
+else
+    Hxn = 1;
+    Hyn = 1;
+    Hxp = 1;
+    Hyp = 1;
+end
+
+% Projection of direction vector onto boundary
+Pproj = [Yp-rad, rad-Xp].*(Pdir(:,1).*(Yp-rad)-Pdir(:,2).*(Xp-rad))./((Xp-rad).^2+(Yp-rad).^2);
+Nproj = [Yn-rad,rad-Xn].*(Ndir(:,1).*(Yn-rad)-Ndir(:,2).*(Xn-rad))./((Xn-rad).^2+(Yn-rad).^2);
+
+%% In circular context:
+if not(boundary)
+    % Heaviside for when Pdir is on boundary
+    % Determines whether to include radial component of dxdt
+    Pheav = heaviside(Pdir(:,1)-Pproj(:,1)).*heaviside(5 - Xp)+heaviside(Pproj(:,1)-Pdir(:,1)).*heaviside(-5 + Xp);
+    %heaviside for when Ndir is on boundary
+    Nheav = heaviside(Ndir(:,1)-Nproj(:,1)).*heaviside(5 - Xn)+heaviside(Nproj(:,1)-Ndir(:,1)).*heaviside(-5 + Xn);
+else
+    Pheav = 1;
+    Nheav = 1;
+end
+%size(actvtd)
+respN = vN.*(Nheav.*(Ndir - Nproj)+Nproj);
+%size(respN)
+boundsN = ((Xn-rad).^2+(Yn-rad).^2 > (rad^2));
+respP = vP.*(Pheav.*(Pdir - Pproj)+Pproj);
+boundsP = ((Xp-rad).^2+(Yp-rad).^2 > (rad^2));
+
+%% Put back together into dx/dt
+dxdt = [Hxn.*(boundsN.*respN(:,1)+(1-boundsN).*(vN.*Ndir(:,1)));...
+        Hyn.*(boundsN.*respN(:,2)+(1-boundsN).*(vN.*Ndir(:,2)));...
+        Hxp.*(boundsP.*respP(:,1)+(1-boundsP).*(vP.*Pdir(:,1)));...
+        Hyp.*(boundsP.*respP(:,2)+(1-boundsP).*(vP.*Pdir(:,2)))];
+if sum(dxdt) > 1000
+    for i=1
+        continue;
+    end
+end
+end
+
+
+%% ~ Helper Functions ~ %%
+%% Calculate the signal produced by A (for A and B)
+function ret = sgnlCalc(Xa,Ya,Xb,Yb,nAcells,nBcells,cA,coeffDiff,coeffSame,slfSgnl,actvtd)
+    % Begin by starting each B cell receiving zero signal,
+    BAtot = zeros(nBcells,1);
+    % ...and thus there is zero gradient to follow.
+    BAgrad = zeros(nBcells,2);
+
+    % Start each A cell receiving zero signal,
+    AAtot = zeros(nAcells,1);
+    % ...and thus there is zero gradient to follow.
+    AAgrad = zeros(nAcells,2);
+
+    % Loop through each of the Acells and add the i'th
+    %  cell's signal to the total
+    for i = 1:nAcells
+        if actvtd(i)
+            % Calculate signal each B-cell receives from
+            %  the i'th A cell
+            sgnlBA = coeffDiff*exp(-((Xb - Xa(i)).^2 + (Yb - Ya(i)).^2)./abs(cA));
+            % Add the signal to the total
+            BAtot = BAtot + sgnlBA;
+            % Find change in the gradient that each B-cell
+            %  experiences as a result
+            BAgrad = BAgrad - 2*sgnlBA.*[(Xb-Xa(i))./cA, (Yb-Ya(i))./cA];
+            
+            % Calculate signal each A-cell receives from
+            %  the i'th A cell
+            % Ignore an A-cell interacting with itself using
+            %  a multiplier that is 1 when they are equal
+            %  and zero otherwise
+            if (not(slfSgnl)) % If the program is set to ignore
+                AAmult = zeros(nAcells,1);
+                AAmult(i) = 1;
+            end
+            % Calculate signal each A-cell receives from
+            %  the i'th A cell
+            sgnlAA = (1-AAmult).*coeffSame.*exp(-((Xa - Xa(i)).^2 + (Ya - Ya(i)).^2)./abs(cA));
+            % Add the signal to the total
+            AAtot = AAtot + sgnlAA;
+            % Find change in the gradient that each A-cell
+            %  experiences as a result
+            AAgrad = AAgrad - sgnlAA.*[2*(Xa-Xa(i))./cA, 2*(Ya-Ya(i))./cA];
+        end
+    end
+    ret = {BAtot, BAgrad, AAtot, AAgrad};
+end
+
+%% Define the heaviside function
+function y = heaviside(x)
+    y=x;
+    for i=1:width(x)*length(x)
+        if x(i) > 0
+            y(i) = 1;
+%       elseif x(i) == 0
+%           y(i) = 0.5;
+        else
+            y(i) = 0;
+        end
+    end
+end
+
+%% Find a unit vector
+function y = units(x)
+    y=x;
+    mag = sum(x.'.^2).';
+    for i=1:length(mag)
+        if mag(i) == 0
+            y(i,:) = x(i,:)/mag(i);
+        end
+    end
+end
