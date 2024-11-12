@@ -1,6 +1,7 @@
-% Two-Cell System with different cell types (Neural Crest Cell and Placodal Cell)
+% Two-Cell System with different cell types (Neural Crest Cell and Placodal
+% Cell
 
-function [] = Cell_System_Solvedw2_copy
+function [] = Stream_System_Solvedw2_copy
 
 close all;
 clearvars; % Changed from 'clear all' for performance
@@ -22,21 +23,18 @@ j = 0;%1; %                         %unnecessary???
 k = thPN^2/8; % half saturation for P %%%% .1
 wN = 0.8;%1;%0.9;%1%0.8; %0;%0.8;
 wP = 0.9;%0.8;%0.8;%1;%0.9;%1;%0.8; %0;%0.8;
-
-mult = 1.5;
-
 rad = mult*5; % Radius of circular boundary
 boundary = 1; % Setting for circular (0) vs rectangle (1) boundary
 wdth = 12;
 lgth = 12;
 thNN = 0.01;
-thPP = 0.01;
-actSeq=1;
+thPP = 0.005;
+actSeq=true;
 
 
 % Time-span to solve system over
 dt = 1;
-tEnd = 500;%5000;
+tEnd = 20000;%5000;
 
 % Initial positions (x,y of NCC and P cell)
 % Xn0 = [2,   4, 5,   5, 7]; % [2,3]; 6
@@ -61,24 +59,24 @@ ncsOnly = false;
 %}
 %% Group displacement initial positions
 
-nNcells = 20;
-nPcells = 20;
-
-nxb = [6,7];
-nyb = [7.05,10];
-pxb = [5.5,6.5];
-pyb = [5,7];
-
-Xn0 = nxb(1)+(nxb(2)-nxb(1))*(rand(1,nNcells));
-Yn0 = nyb(1)+(nyb(2)-nyb(1))*(rand(1,nNcells));
-Xp0 = pxb(1)+(pxb(2)-pxb(1))*(rand(1,nPcells));
-Yp0 = pyb(1)+(pyb(2)-pyb(1))*(rand(1,nPcells));
-
- ncsOnly = false;
-tEnd = 10000;
- aSeq=repelem(0,length(Xn0));
-mult = 1;
-boundary = 1;
+% nNcells = 20;
+% nPcells = 20;
+% 
+% nxb = [6,7];
+% nyb = [7.05,10];
+% pxb = [5.5,6.5];
+% pyb = [5,7];
+% 
+% Xn0 = nxb(1)+(nxb(2)-nxb(1))*(rand(1,nNcells));
+% Yn0 = nyb(1)+(nyb(2)-nyb(1))*(rand(1,nNcells));
+% Xp0 = pxb(1)+(pxb(2)-pxb(1))*(rand(1,nPcells));
+% Yp0 = pyb(1)+(pyb(2)-pyb(1))*(rand(1,nPcells));
+% 
+%  ncsOnly = false;
+% tEnd = 5000;
+%  aSeq=repelem(0,length(Xn0));
+% mult = 1;
+% boundary = 1;
 
 %% NCs only initial positions
 %{
@@ -94,7 +92,7 @@ aSeq=repelem(0,length(Xn0));
 boundary = 0;
 %}
 %% Barriga modeling-initial positions
-%{
+
 ndiv=20;
 Ntot = 1;%ceil(15/ndiv);
 XDIST = 0.5;
@@ -129,7 +127,7 @@ else
 end
 ncsOnly = false;
 boundary = 0;
-%}
+
 
 % Calculating numbers of cells
 nNcells=width(Xn0);
@@ -187,7 +185,7 @@ figure(6)
 %% --- Solving ODE --- %%
 
 parameter_vector = [cN cP a b r VN thNP selfSgnl f vP thPN ncsOnly k,wN,wP,rad,boundary,wdth,lgth,thNN, thPP, nNcells,nPcells,aSeq];
-[t,x] = ode45(@Cell_System_ODEsdw2_copy, tspan, x0, [], parameter_vector);
+[t,x] = ode45(@Stream_System_ODEsdw2_copy, tspan, x0, [], parameter_vector);
 %ode23s
 
 %% Re-slicing x into Xn, Yn, Xp, and Yp
@@ -407,7 +405,6 @@ if (not(ncsOnly)) % not necessary if NCs are only ones?
                         %plot(axsub{i}, Xp(T1,j), Yp(T1,j), 'bs',LineWidth=lw);
                     end
                 end
-
                 %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
                 %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
                 %set(gca, 'fontsize',20)
@@ -447,88 +444,10 @@ end
 %contained
 
 
-figure(8)
-    hold on;
-    % Plot NC x coords
-    for i=1:nNcells
-        plot(t, Xn(:,i),'r', LineWidth=lw);
-    end
-    xlabel('Time')
-    ylabel('x axis position')% coord')
-    ylim([0 11])
-    if ncsOnly == false
-        legend(["NC Cells"])
-    end
-    if ncsOnly == true
-        legend("NC Cells")
-    end
-         saveas(gcf,'Fig5NC_x','epsc')
-
-
-figure(9)
-    hold on;
-    % Plot NC x coords
-        for i=1:nPcells
-            plot(t, Xp(:,i),'b',LineWidth=lw);
-        end
-    xlabel('Time')
-    ylabel('x axis position')% coord')
-    ylim([0 11])
-    if ncsOnly == false
-        legend(["P Cells"])
-    end
-    if ncsOnly == true
-        legend("P Cells")
-    end
-         saveas(gcf,'Fig5P_x','epsc')
-
-figure(10)
-    hold on;
-    % Plot NCs
-    for i=1:nNcells
-        plot(t, Yn(:,i),'r', LineWidth=lw);
-    end
-    % Label axes
-    xlabel('Time')
-    ylabel('y-axis position')% coord')
-    ylim([0 11])
-    % Plot legend
-    if ncsOnly == false
-        legend(['NC Cells'])
-    end
-    if ncsOnly == true
-        legend("Yn")
-    end
-          saveas(gcf,'Fig5NC_y','epsc')
-
- figure(11)
-    hold on;
-    if ncsOnly == false
-        for i=1:nPcells
-            plot(t, Yp(:,i),'b', LineWidth=lw);
-        end
-    end
-    % Label axes
-    xlabel('Time')
-    ylabel('y-axis position')% coord')
-    ylim([0 11])
-    % Plot legend
-    if ncsOnly == false
-        legend(['P Cells'])
-    end
-    if ncsOnly == true
-        legend("P Cells")
-    end
-          saveas(gcf,'Fig5P_y','epsc')
-
-
-
-
 %% Finally, save the data to a csv
 out=[t,Xn,Yn,Xp,Yp];
+writematrix(out);
 % Take time measurement
 toc
 disp("Done plotting")
 end
-
-
