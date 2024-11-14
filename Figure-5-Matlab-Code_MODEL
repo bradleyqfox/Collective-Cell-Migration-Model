@@ -1,4 +1,6 @@
-function dxdt = Stream_System_ODEsdw2_copy(t, x, par)
+% Model used for Figure 5
+
+function dxdt = Cell_System_ODEsdw2_copy(t, x, par)
 
 % Interpret parameter vector
 cN = par(1); % SD for NC signal
