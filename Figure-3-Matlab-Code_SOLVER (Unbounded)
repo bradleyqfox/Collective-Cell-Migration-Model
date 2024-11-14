@@ -1,4 +1,4 @@
-% Figure 3 - Two-Cell NC and P System - UNBOUNDED
+% Figure 3 - Two-Cell NC and P System - (unbounded)
 
 function [] = Two_cell_system_solved_unbounded_MDPI
 
