@@ -1,3 +1,5 @@
+% Model used for Figure 4
+
 function dxdt = Single_Type_System(t, x, par)
 
 % Interpret parameter vector
