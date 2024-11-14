@@ -1,0 +1,153 @@
+% Figure 3 - Two-Cell System (Bounded) 
+
+function [] = Two_cell_system_solved_MDPI
+
+close all;
+clearvars; 
+tic
+a = 2;
+cN = 1;
+
+% b is signal max value for same-cell interactions
+b = a;
+cP = cN; % SD for signal PS %%%% 2
+r = 0.894;                          %unnecessary???
+VN = 0.5 ; % sin term for Xn speed of Xn
+thNP = 0.08;%0.08;%0.04;%0.4;%0.7*a; % signal root for FNPS %%%% 1
+selfSgnl = false;
+f = thNP^2/8; % half saturation for N %%%% .01
+vP = 1.5;%0.2; % speed of Yp
+thPN = 0.04;%0.04;%.08; % signal root for FPNS %%%% .5
+j = 0;%1; %                         %unnecessary???
+k = thPN^2/8; % half saturation for P %%%% .1
+wN = 0.8;%1;%0.9;%1%0.8; %0;%0.8;
+wP = 0.9;%0.8;%0.8;%1;%0.9;%1;%0.8; %0;%0.8;
+
+mult = 1.5;
+
+boundary = 0; % Setting for circular (0) vs rectangle (1) boundary
+wdth = 12;
+lgth = 12;
+thNN = 0.01;
+thPP = 0.01;
+actSeq=1;
+
+rad = mult*5; % Radius of circular boundary
+
+% Time-span to solve system over
+dt = 1;
+tEnd = 20000;%5000;
+
+
+%% Group displacement initial positions
+
+nNcells = 1;
+nPcells = 1;
+
+Xn0 = 5;
+Yn0 = 9;
+Xp0 = 5;
+Yp0 = 8;
+
+ncsOnly = false;
+tEnd = 500;
+aSeq=repelem(0,length(Xn0));
+mult = 1;
+boundary = 0;
+rad = mult*5; % Radius of circular boundary
+
+
+% Calculating numbers of cells
+nNcells=width(Xn0);
+nPcells=width(Xp0);
+% Setting up initial vector
+x0 = mult*[Xn0,Yn0,Xp0,Yp0];
+
+% Time-span to solve over
+tspan = 0:dt:tEnd;
+% Line width
+lw = 2;
+
+% If only paying attention to NCs,
+%  P's remain still and don't produce much signal.
+if (ncsOnly)
+    vP = 0;
+    a = 0.0001;
+end
+
+%% --- Solving ODE --- %%
+
+parameter_vector = [cN cP a b r VN thNP selfSgnl f vP thPN ncsOnly k,wN,wP,rad,boundary,wdth,lgth,thNN, thPP, nNcells,nPcells,aSeq];
+[t,x] = ode45(@Two_cell_system, tspan, x0, [], parameter_vector);
+%ode23s
+
+%% Re-slicing x into Xn, Yn, Xp, and Yp
+xnmax = nNcells;
+ynmax = xnmax + nNcells;
+xpmax = ynmax + nPcells;
+ypmax = xpmax + nPcells;
+Xn = x(:,1:xnmax);
+Yn = x(:,xnmax+1:ynmax);
+Xp = x(:,ynmax+1:xpmax);
+Yp = x(:,xpmax+1:ypmax);
+
+toc
+disp("Done simulating")
+tic
+
+%% X AND Y coords
+
+figure(1)
+    hold on;
+    % Plot NC x coords
+    for i=1:nNcells
+        plot(t, Xn(:,i),'r', LineWidth=lw);
+    end
+    if ncsOnly == false
+        for i=1:nPcells
+            plot(t, Xp(:,i),'b',LineWidth=lw);
+        end
+    end
+    xlabel('Time')
+    ylabel('x-axis position')% coord')
+    if ncsOnly == false
+        legend(["NC Cell",'P Cell'])
+    end
+    if ncsOnly == true
+        legend("Xn")
+    end
+    fontsize(15,"points")
+    saveas(gcf,'Fig3B_LargeFont_BOUNDED_X','epsc')
+
+figure(2) %USED IN PAPER
+    hold on;
+    % Plot NCs
+    for i=1:nNcells
+        plot(t, Yn(:,i),'r', LineWidth=lw);
+    end
+    % Plot P cells
+    if ncsOnly == false
+        for i=1:nPcells
+            plot(t, Yp(:,i),'b', LineWidth=lw);
+        end
+    end
+    % Label axes
+    xlabel('Time')
+    ylabel('y-axis position')% coord')
+    % Plot legend
+    if ncsOnly == false
+        legend(["NC Cell",'P Cell'])
+    end
+    if ncsOnly == true
+        legend("Yn")
+    end
+    fontsize(15,"points")
+    saveas(gcf,'Fig3B_LargeFont_BOUNDED_Y','epsc')
+
+%% Finally, save the data to a csv
+out=[t,Xn,Yn,Xp,Yp];
+writematrix(out);
+% Take time measurement
+toc
+disp("Done plotting")
+end
