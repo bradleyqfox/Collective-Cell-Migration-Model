@@ -1,4 +1,4 @@
-% Model used for Figure 6
+% Model used for Figure 6 Simulation (Streaming in a Disc)
 
 function dxdt = TESTCell_System_ODEsdw(t, x, par)
 
@@ -16,8 +16,7 @@ vP = par(10); % speed of P
 thPN = par(11); % signal root for FPNS
 %j = par(12);
 k = par(13); % half saturation for P
-wN = par(14); % 'weighting' of Neural signals
-              % (ratio representing how much N pays attention to P)
+wN = par(14); % 'weighting' of Neural signals (ratio representing how much N pays attention to P)
 wP = par(15); % weighting of Placodal signals (ratio)
 
 % Settings for the boundary
@@ -29,8 +28,6 @@ thNN = par(20);
 thPP = par(21);
 nNcells = par(22);
 nPcells = par(23);
-
-EXP = 1; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Taking slices of x corresponding to Xn, Yn, Xp, Yp
 xnmax = nNcells;
@@ -70,8 +67,10 @@ for i = 1:nPcells
  PSt = PSt + PS;
  PSgrad = PSgrad - PS.*[2*(Xn-Xp(i))./cN, 2*(Yn-Yp(i))./cN];
 end
+
 NNSt = zeros(nNcells,1);
 NNSgrad = zeros(nNcells,2);
+
 for i = 1:nNcells
  NNSmult = zeros(nNcells,1);
  NNSmult(i) = 1;
@@ -141,8 +140,6 @@ y=x;
 for i=1:width(x)*length(x)
  if x(i) > 0
      y(i) = 1;
-%  elseif x(i) == 0
-%      y(i) = 0.5;
  else
      y(i) = 0;
  end
