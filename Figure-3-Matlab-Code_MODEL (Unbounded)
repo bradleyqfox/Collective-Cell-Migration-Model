@@ -1,3 +1,5 @@
+% Model used for Figure 3b Unbounded Scenario
+
 function dxdt = Two_cell_system_unbounded(t, x, par)
 
 % Interpret parameter vector
