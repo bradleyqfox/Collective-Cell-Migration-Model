@@ -28,6 +28,7 @@ thNN = par(20);
 thPP = par(21);
 nNcells = par(22);
 nPcells = par(23);
+aSeq = par(24:length(par));
 
 % Taking slices of x corresponding to Xn, Yn, Xp, Yp
 xnmax = nNcells;
@@ -38,6 +39,9 @@ Xn = x(1:xnmax);
 Yn = x(xnmax+1:ynmax);
 Xp = x(ynmax+1:xpmax);
 Yp = x(xpmax+1:ypmax);
+
+%% Calculate which cells are activated
+actvtd = aSeq <= t;
 
 % Signal produced by N
 % dxdt(1) = a*exp(-((Xp - Xn).^2 + (Yp - Yn).^2)./cN);%why is this a derivative? negative sign?
