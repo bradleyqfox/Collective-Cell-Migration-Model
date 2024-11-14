@@ -1,436 +1,191 @@
-% Model used for Figure 3b Bounded Scenario
+% Model used for Figure 3b Bounded Two-Cell Simulation
 
+function dxdt = Two_cell_system(t, x, par)
 
-function [] = Two_cell_system_solved
+% Interpret parameter vector
+cN = par(1); % SD for NC signal
+cP = par(2); % SD for P signal
+a = par(3); % Outside Sn exp term (max strength of signal)
+b = par(4); % Outside Sp exp term (max strength of signal)
+%r = par(5); % assuming identical for each cell, for now (easy fix)
+vN = par(6); % speed of N
+thNP = par(7); % signal root for FNPS
+selfSgnl = par(8); % True = pay attention to self's sgnl, else don't
+f = par(9); % half saturation for N
+vP = par(10); % speed of P
+thPN = par(11); % signal root for FPNS
+ncsOnly = par(12);
+k = par(13); % half saturation for P
+wN = par(14); % 'weighting' of Neural signals (ratio representing how much N pays attention to P)
+wP = par(15); % weighting of Placodal signals (ratio)
 
-close all;
-clearvars; % Changed from 'clear all' for performance
-tic
-a = 2;%1;%0.01; % outside Sn exp. term %%%% 2
-cN = 1;%0.1; % SD for signal NS  %%%% 4
+% Settings for the boundary
+rad = par(16);
+boundary = par(17);
+wdth = par(18);
+hght = par(19);
+thNN = par(20);
+thPP = par(21);
+nNcells = par(22);
+nPcells = par(23);
+aSeq = par(24:length(par));
 
-% b is signal max value for same-cell interactions
-b = a;%0.01;%0.00001;%0.5; % outside Sp exp. term %%%% 4
-cP = cN; % SD for signal PS %%%% 2
-r = 0.894;                          %unnecessary???
-VN = 0.5 ; % sin term for Xn speed of Xn
-thNP = 0.08;%0.08;%0.04;%0.4;%0.7*a; % signal root for FNPS %%%% 1
-selfSgnl = false;
-f = thNP^2/8; % half saturation for N %%%% .01
-vP = 1.5;%0.2; % speed of Yp
-thPN = 0.04;%0.04;%.08; % signal root for FPNS %%%% .5
-j = 0;%1; %                         %unnecessary???
-k = thPN^2/8; % half saturation for P %%%% .1
-wN = 0.8;%1;%0.9;%1%0.8; %0;%0.8;
-wP = 0.9;%0.8;%0.8;%1;%0.9;%1;%0.8; %0;%0.8;
+f2 = thNN^2 / 8;
+k2 = thPP^2 / 8;
 
-mult = 1.5;
-
-boundary = 0; % Setting for circular (0) vs rectangle (1) boundary
-wdth = 12;
-lgth = 12;
-thNN = 0.01;
-thPP = 0.01;
-actSeq=1;
-
-rad = mult*5; % Radius of circular boundary
-
-
-% Time-span to solve system over
-dt = 1;
-tEnd = 20000;%5000;
-
-
-%% Group displacement initial positions
-
-nNcells = 1;
-nPcells = 1;
-
-% Xn0 = 6;
-% Yn0 = 8;
-% Xp0 = 5;
-% Yp0 = 7;
-
-Xn0 = 5;
-Yn0 = 9;
-Xp0 = 5;
-Yp0 = 8;
-
-
-
- ncsOnly = false;
-tEnd = 500;
- aSeq=repelem(0,length(Xn0));
-mult = 1;
-boundary = 0;
-rad = mult*5; % Radius of circular boundary
-
-%% NCs only initial positions
-%{
-Ntot = 20;
-XDIST = 1;
-Xn0 = XDIST * rand(1,Ntot) + 5 - XDIST*0.5;
-Yn0 = XDIST * rand(1,Ntot) + 5 - XDIST*0.5;
-
-Xp0 = [2,3];
-Yp0 = [2,1];
-ncsOnly = true;
-aSeq=repelem(0,length(Xn0));
-boundary = 0;
-%}
-%% Barriga modeling-initial positions
-%{
-ndiv=20;
-Ntot = 1;%ceil(15/ndiv);
-XDIST = 0.5;
-YDIST = 0.5;
-Xn0=[XDIST*rand(1,Ntot)+4,-1*XDIST*rand(1,Ntot)+6];
-Yn0=[YDIST*rand(1,Ntot)+5];
-Yn0=[Yn0,Yn0,Yn0-1.5, Yn0-1.5,Yn0+1.5, Yn0+1.5];
-Xn0 = [Xn0,Xn0,Xn0];
-
-%Xn0=XDIST*rand(1,Ntot)+4.5+1.5;
-%Yn0=YDIST*rand(1,Ntot)+5+2;
-
-Ntot = 20;
-XDIST = 1;
-YDIST = 5;
-Xp0=[XDIST*rand(1,Ntot)+2.7,XDIST*rand(1,Ntot)+6.3,(6.3+XDIST-2.7)*rand(1,Ntot)+2.7];
-Yp0=[YDIST*rand(1,Ntot)+3,YDIST*rand(1,Ntot)+3,XDIST*rand(1,Ntot)+8];
-%Xp0 = [1.3,2];%[10-Xn0,      3,5,7,3,5,7];%   3;% 4+[3,4];
-%Yp0 = [3.5,3];%[(Yn0-5).*2+5,2,2,2,8,8,8];%   5;% [5,5];
-%length(Xn0)
-
-if actSeq
-    nNcells=width(Xn0);
-    Xn0 = repelem(Xn0,ndiv);%2);
-    Yn0 = repelem(Yn0,ndiv);%,2);
-    %aSeq = repelem(0,nNcells);
-    aSeq=repmat(100/ndiv*[0:ndiv-1],[1,nNcells]);
-    %size(aSeq)
-    %aSeq = 400*rand(1,nNcells);%,2*nNcells);
-else
-    aSeq=repelem(0,nNcells);
-end
-ncsOnly = false;
-boundary = 0;
-%}
-
-% Calculating numbers of cells
-nNcells=width(Xn0);
-nPcells=width(Xp0);
-% Setting up initial vector
-x0 = mult*[Xn0,Yn0,Xp0,Yp0];
-
-% Time-span to solve over
-tspan = 0:dt:tEnd;
-% Line width
-lw = 2;
-
-% If only paying attention to NCs,
-%  P's remain still and don't produce much signal.
-if (ncsOnly)
-    vP = 0;
-    a = 0.0001;
-end
-
-% Plotting initial positions
-figure(6)
-    hold on;
-    axis equal;
-    % Neural initial positions
-    plot(mult*Xn0, mult*Yn0,'ro', LineWidth=lw);
-    % Placodes initial positions
-    if ncsOnly == false
-        plot(mult*Xp0, mult*Yp0,'bs',LineWidth=lw);
-    end
-
-    %for i=1:nPcells
-    %    plot(Xp(length(Xp),i), Yp(length(Xp),i), 'bo');
-    %end
-    %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
-    %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
-    
-    set(gca,'fontsize',20)
-    xlabel('x-axis position')% coord')
-    ylabel('y-axis position')% coord')
-    xlim([0 10])
-    ylim([0 10])
-      if not(boundary)
-          pos = [0 0 2*rad 2*rad];
-          rect = rectangle('Position',pos,'Curvature',[1 1],LineWidth=lw);
-      end
-    set(gca,'fontsize',10)
-    %title('ncs only initial conditions')
-    if ncsOnly == false
-        legend(["NC cell",'P cell']) %repelem("",nNcells)
-    end
-    if ncsOnly == true
-        legend("NC cell")
-    end
-     saveas(gcf,'SuppFigA','epsc')
-    
-
-%% --- Solving ODE --- %%
-
-parameter_vector = [cN cP a b r VN thNP selfSgnl f vP thPN ncsOnly k,wN,wP,rad,boundary,wdth,lgth,thNN, thPP, nNcells,nPcells,aSeq];
-[t,x] = ode45(@Two_cell_system, tspan, x0, [], parameter_vector);
-%ode23s
-
-%% Re-slicing x into Xn, Yn, Xp, and Yp
+% Taking slices of x corresponding to Xn, Yn, Xp, Yp
 xnmax = nNcells;
 ynmax = xnmax + nNcells;
 xpmax = ynmax + nPcells;
 ypmax = xpmax + nPcells;
-Xn = x(:,1:xnmax);
-Yn = x(:,xnmax+1:ynmax);
-Xp = x(:,ynmax+1:xpmax);
-Yp = x(:,xpmax+1:ypmax);
+Xn = x(1:xnmax);
+Yn = x(xnmax+1:ynmax);
+Xp = x(ynmax+1:xpmax);
+Yp = x(xpmax+1:ypmax);
 
-toc
-disp("Done simulating")
-tic
+%% Calculate which cells are activated
+actvtd = aSeq <= t;
 
-%% Find NC cell density
-%{
-MINS=zeros(1,nNcells);
-for i=1:nNcells
-    dists = zeros(1,nNcells-1);
-    if i > 1
-        dists(1:i-1) = sqrt( (Xn(length(Xn(:,1)),i)-Xn(length(Xn(:,1)),1:i-1)).^2 + ...
-            (Yn(length(Xn(:,1)),i)-Yn(length(Xn(:,1)),1:i-1)).^2   );
-    end
-    if i < nNcells
-        dists(i:nNcells-1) = sqrt( (Xn(length(Xn(:,1)),i)-Xn(length(Xn(:,1)),i+1:nNcells)).^2 + ...
-            (Yn(length(Xn(:,1)),i)-Yn(length(Xn(:,1)),i+1:nNcells)).^2   );
-    end
-    %min(dists)
-    %size(dists)
-    MINS(i)=min(dists);
-end
-%MINS
-mean(MINS)
-std(MINS)
-%}
-%% --- Plotting the results --- %%
-% close all;
+%% Signal produced by P
+calcP = sgnlCalc(Xp,Yp,Xn,Yn,nPcells,nNcells,cN,a,b,selfSgnl,repelem(1,nPcells));
 
-% tt = strcat('dt: ',num2str(dt));
+% Collect outputs
+PSt = calcP{1}; % Total P-signal recv'd by N
+PSgrad = calcP{2}; % Gradient of P-signal recv'd by N
+PPSt = calcP{3}; % Total P-signal recv'd by P
+PPSgrad = calcP{4}; % Gradient of P-signal recv'd by P
 
-%% Phase portrait
-figure(1)
-    hold on;
-    axis equal;
-    % Plot NC cells through time
-    for i=1:nNcells
-        plot(Xn(:,i), Yn(:,i),'ro');%,LineWidth=lw);
-    end
-    % Plot P cells through time
-    if ncsOnly == false
-        for i=1:nPcells
-            plot(Xp(:,i), Yp(:,i), 'bs');%,LineWidth=lw);
-        end
-    end
-    set(gca,'fontsize',20)
-    xlabel('x-axis position')% coord')
-    ylabel('y-axis position')% coord')
-    % If it's a circle, not rectangle boundary,
-    %  plot it.
-    %if not(boundary)
-        %pos = [0 0 2*rad 2*rad];
-        %rectangle('Position',pos,'Curvature',[1 1], LineWidth=lw);
-    %end
-    set(gca,'fontsize',10)
-    %title(tt)
-    % Add legend
-    if ncsOnly == true
-        legend("N cell")
-    end
-    if ncsOnly == false
-        legend(["NC cell",'P cell'])
-    end
-    fontsize(14,"points")
-    saveas(gcf,'SuppFigB','epsc')
+%% Signal produced by N
+calcN = sgnlCalc(Xn,Yn,Xp,Yp,nNcells,nPcells,cN,a,b,selfSgnl,actvtd);
 
+% Collect outputs
+NSt = calcN{1}; % Total N-signal recv'd by P
+NSgrad = calcN{2}; % Gradient of P-signal recv'd by N
+NNSt = calcN{3}; % Total N-signal recv'd by N
+NNSgrad = calcN{4}; % Gradient of P-signal recv'd by N
 
-% figure(2)
-%  plot(t, FPNS,'k'); 
-%  hold on;
-%  plot(t, FNPS,'b');
-% xlabel('t')
-% ylabel('responses')
-% legend('FPNS', 'FNPS')
+%% Responses
+% FNPS response of N to PS
+FNPS= wN*PSt.*(thNP-PSt)./(PSt.^2 +f);
+% FPNS response of P to NS
+FPNS = wP*NSt.*(thPN-NSt)./(NSt.^2 +k);
 
-%% x coords
-figure(2)
-    hold on;
-    % Plot NC x coords
-    for i=1:nNcells
-        plot(t, Xn(:,i),'r', LineWidth=lw);
-    end
-    if ncsOnly == false
-        for i=1:nPcells
-            plot(t, Xp(:,i),'b',LineWidth=lw);
-        end
-    end
-    xlabel('Time')
-    ylabel('x-axis position')% coord')
-    if ncsOnly == false
-        legend(["NC Cell",'P Cell'])
-    end
-    if ncsOnly == true
-        legend("Xn")
-    end
-    fontsize(14,"points")
-    saveas(gcf,'SuppFigD','epsc')
-%title(tt)
+% FNNS response of N to NS
+FNNS = (1-wN)*NNSt.*(thNN-NNSt)./(NNSt.^2 +f2);
+% FPPS response of P to PS
+FPPS = (1-wP)*PPSt.*(thPP-PPSt)./(PPSt.^2 +k2);
 
-%% y coords
-figure(3) %USED IN PAPER
-    hold on;
-    % Plot NCs
-    for i=1:nNcells
-        plot(t, Yn(:,i),'r', LineWidth=lw);
-    end
-    % Plot P cells
-    if ncsOnly == false
-        for i=1:nPcells
-            plot(t, Yp(:,i),'b', LineWidth=lw);
-        end
-    end
-    % Label axes
-    xlabel('Time')
-    ylabel('y-axis position')% coord')
-    % Plot legend
-    if ncsOnly == false
-        legend(["NC Cell",'P Cell'])
-    end
-    if ncsOnly == true
-        legend("Yn")
-    end
-    fontsize(15,"points")
-    saveas(gcf,'SuppFigE','epsc')
-    %title(tt)
+% Turn response magnitudes into vectors and sum
+Ndir = units(PSgrad).*FNPS; %+ units(NNSgrad).*FNNS;
+Pdir = units(NSgrad).*FPNS; %+ units(PPSgrad).*FPPS;
+Ndir = actvtd.'.*Ndir;
 
-% Optional distance graph -- for when only two cells are involved:
-% dists=sqrt((Xn-Xp).^2+(Yn-Yp).^2);
-
-% figure(4)
-%  hold on;
-%  for i=1:sw
-%   plot(t, dists(:,i),'r');
-%  end
-% xlabel('t')
-% ylabel('dist')
-
-%% Final positions
-figure(5)
-    hold on;
-    axis equal;
-    % Plot NCs
-    for i=1:nNcells
-        plot(Xn(length(Xn(:,1)),i), Yn(length(Xn(:,1)),i),'ro',LineWidth=lw);
-    end
-    % Plot Ps
-    if ncsOnly == false
-        for i=1:nPcells
-            plot(Xp(length(Xp(:,1)),i), Yp(length(Xp(:,1)),i), 'bs',LineWidth=lw);
-        end
-    end
-    %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
-    %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
-    
-    % Aesthetics
-    set(gca,'fontsize',20)
-    xlabel('x')% coord')
-    ylabel('y')% coord')
-    if not(boundary)
-        pos = [0 0 2*rad 2*rad];
-        rectangle('Position',pos,'Curvature',[1 1],LineWidth=lw);
-    end
-    set(gca,'fontsize',10)
-    %title(tt)
-    % Add a Legend
-    if ncsOnly == false
-        legend(["N cell",repelem("",nNcells+1),'P cell'])
-    end
-    if ncsOnly == true
-        legend("N cell")
-    end
-    fontsize(14,"points")
-
-%% 8-step Logarithmic Sampling of Process
-if (not(ncsOnly)) % not necessary if NCs are only ones?
-    f7 = figure(7);
-        ax = gcf;
-        % Define arrangement of tiles for each time
-        n = 4;
-        m = 2;
-        % Find timesteps
-        tstp=nthroot(tEnd,m*n);%tEnd/m/n;
-        %title("Simulation NC cells forming streams that"+ ...
-        %"invade surrounding placodes")
-        pbaspect([6 2 1])
-        % Loop through each frame
-        tiledlayout(m,n);
-        for i=1:m*n
-            % Calculate actual time from frame-number and timestep
-            T1 = floor(tstp^i);
-            %axsub{i} = subplot(m,n,i);
-            nexttile;
-                pbaspect(gca, [1 1 1])
-                hold on;
-                axis equal;
-                for j=1:nNcells
-                    plot(gca, Xn(T1,j), Yn(T1,j),'ro',LineWidth=lw);
-                    %plot(axsub{i}, Xn(T1,j), Yn(T1,j),'ro',LineWidth=lw);
-                end
-                if ncsOnly == false
-                    for j=1:nPcells
-                        plot(gca, Xp(T1,j), Yp(T1,j), 'bs',LineWidth=lw);
-                        %plot(axsub{i}, Xp(T1,j), Yp(T1,j), 'bs',LineWidth=lw);
-                    end
-                end
-                %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
-                %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
-                %set(gca, 'fontsize',20)
-                %set(axsub{i}, 'fontsize',20)
-                xlabel('x')% coord')
-                %xlabel(axsub{i}, 'x')% coord')
-                ylabel('y')% coord')
-                %ylabel(axsub{i}, 'y')% coord')
-                if not(boundary)
-                    pos = [0 0 2*rad 2*rad];
-                    rectangle(gca, 'Position',pos,'Curvature',[1 1],LineWidth=lw);
-                    %rectangle(axsub{i}, 'Position',pos,'Curvature',[1 1],LineWidth=lw);
-                end
-                set(gca, 'fontsize',14)
-                %set(axsub{i}, 'fontsize',10)
-                title(gca, strcat('t=',num2str(T1)))
-                %title(axsub{i}, strcat('t=',num2str(T1)))
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        end
-        if ncsOnly == false
-            legend(["N cell",repelem("",nNcells+1),'P cell'])
-        end
-        if ncsOnly == true
-            legend("N cell")
-        end
+%% Contain cells within box
+if boundary
+    Hxn=heaviside(Xn) - heaviside(Xn-wdth);
+    Hyn=heaviside(Yn) - heaviside(Yn-hght);
+    Hxp=heaviside(Xp) - heaviside(Xp-wdth);
+    Hyp=heaviside(Yp) - heaviside(Yp-hght);
+else
+    Hxn = 1;
+    Hyn = 1;
+    Hxp = 1;
+    Hyp = 1;
 end
 
-%contained = 1;
-%for i = 1:nNcells
-%    if ((Xn(i)-(5+XDIST)/2)^2 + (Yn(i)-(5+XDIST)/2)^2 > 1)
-%        contained = 0;
-%    end
-%end
-%contained
+% Projection of direction vector onto boundary
+Pproj = [Yp-rad, rad-Xp].*(Pdir(:,1).*(Yp-rad)-Pdir(:,2).*(Xp-rad))./((Xp-rad).^2+(Yp-rad).^2);
+Nproj = [Yn-rad,rad-Xn].*(Ndir(:,1).*(Yn-rad)-Ndir(:,2).*(Xn-rad))./((Xn-rad).^2+(Yn-rad).^2);
 
+%% In circular context:
+if not(boundary)
+    % Heaviside for when Pdir is on boundary
+    % Determines whether to include radial component of dxdt
+    Pheav = heaviside(Pdir(:,1)-Pproj(:,1)).*heaviside(5 - Xp)+heaviside(Pproj(:,1)-Pdir(:,1)).*heaviside(-5 + Xp);
+    %heaviside for when Ndir is on boundary
+    Nheav = heaviside(Ndir(:,1)-Nproj(:,1)).*heaviside(5 - Xn)+heaviside(Nproj(:,1)-Ndir(:,1)).*heaviside(-5 + Xn);
+else
+    Pheav = 1;
+    Nheav = 1;
+end
+%size(actvtd)
+respN = vN.*(Nheav.*(Ndir - Nproj)+Nproj);
+%size(respN)
+boundsN = ((Xn-rad).^2+(Yn-rad).^2 > (rad^2));
+respP = vP.*(Pheav.*(Pdir - Pproj)+Pproj);
+boundsP = ((Xp-rad).^2+(Yp-rad).^2 > (rad^2));
 
-%% Finally, save the data to a csv
-out=[t,Xn,Yn,Xp,Yp];
-writematrix(out);
-% Take time measurement
-toc
-disp("Done plotting")
+%% Put back together into dx/dt
+dxdt = [Hxn.*(boundsN.*respN(:,1)+(1-boundsN).*(vN.*Ndir(:,1)));...
+        Hyn.*(boundsN.*respN(:,2)+(1-boundsN).*(vN.*Ndir(:,2)));...
+        Hxp.*(boundsP.*respP(:,1)+(1-boundsP).*(vP.*Pdir(:,1)));...
+        Hyp.*(boundsP.*respP(:,2)+(1-boundsP).*(vP.*Pdir(:,2)))];
+if sum(dxdt) > 1000
+    for i=1
+        continue;
+    end
+end
+end
+
+%% ~ Helper Functions ~ %%
+%% Calculate the signal produced by A (for A and B)
+function ret = sgnlCalc(Xa,Ya,Xb,Yb,nAcells,nBcells,cA,coeffDiff,coeffSame,slfSgnl,actvtd)
+    % Begin by starting each B cell receiving zero signal,
+    BAtot = zeros(nBcells,1);
+    % ...and thus there is zero gradient to follow.
+    BAgrad = zeros(nBcells,2);
+
+    % Start each A cell receiving zero signal,
+    AAtot = zeros(nAcells,1);
+    % ...and thus there is zero gradient to follow.
+    AAgrad = zeros(nAcells,2);
+
+    % Loop through each of the Acells and add the i'th cell's signal to the total
+    for i = 1:nAcells
+        if actvtd(i)
+            % Calculate signal each B-cell receives from the i'th A cell
+            sgnlBA = coeffDiff*exp(-((Xb - Xa(i)).^2 + (Yb - Ya(i)).^2)./abs(cA));
+            % Add the signal to the total
+            BAtot = BAtot + sgnlBA;
+            % Find change in the gradient that each B-cell experiences as a result
+            BAgrad = BAgrad - 2*sgnlBA.*[(Xb-Xa(i))./cA, (Yb-Ya(i))./cA];
+            
+            % Calculate signal each A-cell receives from the i'th A cell
+            % Ignore an A-cell interacting with itself using a multiplier that is 1 when they are equal and zero otherwise
+            if (not(slfSgnl)) % If the program is set to ignore
+                AAmult = zeros(nAcells,1);
+                AAmult(i) = 1;
+            end
+            % Calculate signal each A-cell receives from the i'th A cell
+            sgnlAA = (1-AAmult).*coeffSame.*exp(-((Xa - Xa(i)).^2 + (Ya - Ya(i)).^2)./abs(cA));
+            % Add the signal to the total
+            AAtot = AAtot + sgnlAA;
+            % Find change in the gradient that each A-cell experiences as a result
+            AAgrad = AAgrad - sgnlAA.*[2*(Xa-Xa(i))./cA, 2*(Ya-Ya(i))./cA];
+        end
+    end
+    ret = {BAtot, BAgrad, AAtot, AAgrad};
+end
+
+%% Define the heaviside function
+function y = heaviside(x)
+    y=x;
+    for i=1:width(x)*length(x)
+        if x(i) > 0
+            y(i) = 1;
+        else
+            y(i) = 0;
+        end
+    end
+end
+
+%% Find a unit vector
+function y = units(x)
+    y=x;
+    mag = sum(x.'.^2).';
+    for i=1:length(mag)
+        if mag(i) == 0
+            y(i,:) = x(i,:)/mag(i);
+        end
+    end
 end
