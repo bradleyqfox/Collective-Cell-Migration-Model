@@ -5,44 +5,44 @@ function [] = SingleCellType_System_solved_MDPI
 close all;
 clearvars;
 tic
-a = 0.01;%1;%0.01; % outside Sn exp. term %%%% 2
-cN = 1;%0.1; % SD for signal NS  %%%% 4
 
-% b is signal max value for same-cell interactions
-b = a;%0.01;%0.00001;%0.5; % outside Sp exp. term %%%% 4
-cP = cN; % SD for signal PS %%%% 2
-r = 0.894;                          %unnecessary???
-VN = 0.5 ; % sin term for Xn speed of Xn
-thNP = 0.08;%0.08;%0.04;%0.4;%0.7*a; % signal root for FNPS %%%% 1
-selfSgnl = false;
-f = thNP^2/8; % half saturation for N %%%% .01
-vP = 1.5;%0.2; % speed of Yp
-thPN = 0.04;%0.04;%.08; % signal root for FPNS %%%% .5
-j = 0;%1; %                         %unnecessary???
-k = thPN^2/8; % half saturation for P %%%% .1
-wN = 0.8;%1;%0.9;%1%0.8; %0;%0.8;
-wP = 0.9;%0.8;%0.8;%1;%0.9;%1;%0.8; %0;%0.8;
+a = 0.01; % Maximum magnitude of Gaussian signal (opposite-cell interactions)
+b = a; % Maximum magnitude of Gaussian signal (same-cell interactions)
 
-mult = 1.5;
+cN = 1; % Twice the variance of signal (N cells)
+cP = cN; % Twice the variance of signal (P cells)
 
-rad = mult*5; % Radius of circular boundary
+wN = 0.8; % Weight given by N to gradient of signal P
+wP = 0.8; % Weight given by P to gradient of signal N
+
+thNP = 0.08; % Root of response of N to signal from P
+thNN = 0.01; % Root of response of N to signal from N
+thPN = 0.04; % Root of response of P to signal from N
+thPP = 0.005; % Root of response of P to signal from P
+
+VN = 1; % Maximum speed of N
+vP = 1; % Maximum speed of P
+
+f = thNP^2/8;
+k = thPN^2/8; 
+
+% Unused/old variables or variables related to theboundary
 boundary = 0; % Setting for circular (0) vs rectangle (1) boundary
 wdth = 12;
 lgth = 12;
-thNN = 0.01;
-thPP = 0.01;
+mult = 1.5;
+rad = mult*5; % Radius of circular boundary
+j = 0;
+r = 0.894;
+selfSgnl = false;
+ncsOnly = true;
 actSeq=1;
-
 
 % Time-span to solve system over
 dt = 1;
-tEnd = 1000000;%5000;
-
-
-
+tEnd = 1000000;
 
 %% NCs only initial positions
-
 Ntot = 20;
 XDIST = 1;
 Xn0 = XDIST * rand(1,Ntot) + 5 - XDIST*0.5;
@@ -50,7 +50,6 @@ Yn0 = XDIST * rand(1,Ntot) + 5 - XDIST*0.5;
 
 Xp0 = [2,3];
 Yp0 = [2,1];
-ncsOnly = true;
 aSeq=repelem(0,length(Xn0));
 boundary = 0;
 
