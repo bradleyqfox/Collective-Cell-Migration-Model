@@ -6,33 +6,38 @@ function [] = Two_cell_system_solved_unbounded_MDPI
 close all;
 clearvars; 
 tic
-a = 2;%1;%0.01; % outside Sn exp. term %%%% 2
-cN = 1;%0.1; % SD for signal NS  %%%% 4
-b = a;%0.01;%0.00001;%0.5; % outside Sp exp. term %%%% 4
-cP = cN; % SD for signal PS %%%% 2
-r = 0.894;                          %unnecessary???
-VN = 0.5 ; % sin term for Xn speed of Xn
-thNP = 0.08;% signal root for FNPS %%%% 1
-selfSgnl = false;
-f = thNP^2/8; % half saturation for N %%%% .01
-vP = 1.5; % speed of Yp
-thPN = 0.04;%0.04;%.08; % signal root for FPNS %%%% .5
-j = 0;%1; %                        
-k = thPN^2/8; % half saturation for P %%%% .1
-wN = 0.8;
-wP = 0.9;
-mult = 1.5;
+
+a = 2; % Maximum magnitude of Gaussian signal (opposite-cell interactions)
+b = a; % Maximum magnitude of Gaussian signal (same-cell interactions)
+
+cN = 1; % Twice the variance of signal (N cells)
+cP = cN; % Twice the variance of signal (P cells)
+
+wN = 0.8; % Weight given by N to gradient of signal P
+wP = 0.8; % Weight given by P to gradient of signal N
+
+thNP = 0.08; % Root of response of N to signal from P
+thNN = 0.01; % Root of response of N to signal from N
+thPN = 0.04; % Root of response of P to signal from N
+thPP = 0.005; % Root of response of P to signal from P
+
+VN = 1; % Maximum speed of N
+vP = 1; % Maximum speed of P
+
+f = thNP^2/8;
+k = thPN^2/8; 
+
+% Unused/old variables or variables related to theboundary
 boundary = 0; % Setting for circular (0) vs rectangle (1) boundary
 wdth = 12;
 lgth = 12;
-thNN = 0.01;
-thPP = 0.01;
-actSeq=1;
+mult = 1;
 rad = mult*5; % Radius of circular boundary
-
-% Time-span to solve system over
-dt = 1;
-tEnd = 20000;%5000;
+j = 0;
+r = 0.894;
+selfSgnl = false;
+ncsOnly = false;
+actSeq=1;
 
 %% Group displacement initial positions
 
@@ -44,12 +49,11 @@ Yn0 = 6;
 Xp0 = 5;
 Yp0 = 5;
 
-ncsOnly = false;
-tEnd = 5000;
 aSeq=repelem(0,length(Xn0));
-mult = 1;
-boundary = 0;
-rad = mult*5; % Radius of circular boundary
+
+% Time-span to solve system over
+dt = 1;
+tEnd = 5000;
 
 % Calculating numbers of cells
 nNcells=width(Xn0);
