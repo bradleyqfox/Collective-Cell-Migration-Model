@@ -5,42 +5,43 @@ function [] = Two_cell_system_solved_MDPI
 close all;
 clearvars; 
 tic
-a = 2;
-cN = 1;
 
-% b is signal max value for same-cell interactions
-b = a;
-cP = cN; % SD for signal PS %%%% 2
-r = 0.894;                          %unnecessary???
-VN = 0.5 ; % sin term for Xn speed of Xn
-thNP = 0.08;%0.08;%0.04;%0.4;%0.7*a; % signal root for FNPS %%%% 1
-selfSgnl = false;
-f = thNP^2/8; % half saturation for N %%%% .01
-vP = 1.5;%0.2; % speed of Yp
-thPN = 0.04;%0.04;%.08; % signal root for FPNS %%%% .5
-j = 0;%1; %                         %unnecessary???
-k = thPN^2/8; % half saturation for P %%%% .1
-wN = 0.8;%1;%0.9;%1%0.8; %0;%0.8;
-wP = 0.9;%0.8;%0.8;%1;%0.9;%1;%0.8; %0;%0.8;
+a = 2; % Maximum magnitude of Gaussian signal (opposite-cell interactions)
+b = a; % Maximum magnitude of Gaussian signal (same-cell interactions)
 
-mult = 1.5;
+cN = 1; % Twice the variance of signal (N cells)
+cP = cN; % Twice the variance of signal (P cells)
 
+wN = 0.8; % Weight given by N to gradient of signal P
+wP = 0.8; % Weight given by P to gradient of signal N
+
+thNP = 0.08; % Root of response of N to signal from P
+thNN = 0.01; % Root of response of N to signal from N
+thPN = 0.04; % Root of response of P to signal from N
+thPP = 0.005; % Root of response of P to signal from P
+
+VN = 1; % Maximum speed of N
+vP = 1; % Maximum speed of P
+
+f = thNP^2/8;
+k = thPN^2/8; 
+
+% Unused/old variables or variables related to theboundary
 boundary = 0; % Setting for circular (0) vs rectangle (1) boundary
 wdth = 12;
 lgth = 12;
-thNN = 0.01;
-thPP = 0.01;
-actSeq=1;
-
+mult = 1;
 rad = mult*5; % Radius of circular boundary
+j = 0;
+r = 0.894;
+selfSgnl = false;
+ncsOnly = false;
 
 % Time-span to solve system over
 dt = 1;
-tEnd = 20000;%5000;
-
+tEnd = 500;
 
 %% Group displacement initial positions
-
 nNcells = 1;
 nPcells = 1;
 
@@ -49,13 +50,7 @@ Yn0 = 9;
 Xp0 = 5;
 Yp0 = 8;
 
-ncsOnly = false;
-tEnd = 500;
 aSeq=repelem(0,length(Xn0));
-mult = 1;
-boundary = 0;
-rad = mult*5; % Radius of circular boundary
-
 
 % Calculating numbers of cells
 nNcells=width(Xn0);
@@ -65,11 +60,11 @@ x0 = mult*[Xn0,Yn0,Xp0,Yp0];
 
 % Time-span to solve over
 tspan = 0:dt:tEnd;
+
 % Line width
 lw = 2;
 
-% If only paying attention to NCs,
-%  P's remain still and don't produce much signal.
+% If only paying attention to NCs, P's remain still and produce negligible signal.
 if (ncsOnly)
     vP = 0;
     a = 0.0001;
@@ -79,7 +74,6 @@ end
 
 parameter_vector = [cN cP a b r VN thNP selfSgnl f vP thPN ncsOnly k,wN,wP,rad,boundary,wdth,lgth,thNN, thPP, nNcells,nPcells,aSeq];
 [t,x] = ode45(@Two_cell_system, tspan, x0, [], parameter_vector);
-%ode23s
 
 %% Re-slicing x into Xn, Yn, Xp, and Yp
 xnmax = nNcells;
