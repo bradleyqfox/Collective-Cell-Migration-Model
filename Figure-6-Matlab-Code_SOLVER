@@ -1,7 +1,6 @@
-% Two-Cell System with different cell types (Neural Crest Cell and Placodal
-% Cell
+% Figure 6 - Solver Code
 
-function [] = TESTCell_System_Solvedw
+function [] = Cell_System_Solvedw_MDPI
 
 close all;
 clearvars; % Changed from 'clear all' for performance
@@ -30,21 +29,7 @@ lgth = 11;
 thNN = 0.01;
 thPP = 0.01;
 
-% Initial values for signal, x,y of NCC and P cell
-% Xn0 = [2,   4, 5,   5, 7]; % [2,3]; 6
-% Yn0 = [8.5, 5, 2,   7, 3]; % [9,7]; 8
-% Xp0 = [5,   7, 6.5, 3, 2]; %2
-% Yp0 = [8,   6, 1,   3, 8]; %8
-%{
-Xn0a = [1,2,3,4,1,2,3,4,1,2,3,4];%[1,2];%
-Yn0a = [6.01,5.99,6.0023,6,5.1,5.002,4.975,5,4.01,4,4.03,4];%[6,5];%
-Xn0b = [(3-Xn0a)/5+3,(3-Xn0a)/5+3.85,(3-Xn0a)/5+3.85+.85];
-Yn0b = [(5-Yn0a)/5+5,(5-Yn0a)/5+5,(5-Yn0a)/5+5];
-Xn0c = [Xn0b,Xn0b,Xn0b];
-Yn0c = [Yn0b+.6,Yn0b,Yn0b-.6];
-Xn0  = [Xn0c,Xn0c,Xn0c];
-Yn0  = [Yn0c+2,Yn0c,Yn0c-2];
-%}
+
 Ntot = 5;
 XDIST = 0.5;
 YDIST = 0.5;
@@ -53,17 +38,12 @@ Yn0=[YDIST*rand(1,Ntot)+5];
 Yn0=[Yn0,Yn0,Yn0-1.5, Yn0-1.5,Yn0+1.5, Yn0+1.5];
 Xn0 = [Xn0,Xn0,Xn0];
 
-%Xn0=XDIST*rand(1,Ntot)+4.5+1.5;
-%Yn0=YDIST*rand(1,Ntot)+5+2;
 
 Ntot = 20;
 XDIST = 1;
 YDIST = 5;
 Xp0=[XDIST*rand(1,Ntot)+2.7,XDIST*rand(1,Ntot)+6.3,YDIST*rand(1,Ntot)+3];
 Yp0=[YDIST*rand(1,Ntot)+3,YDIST*rand(1,Ntot)+3,XDIST*rand(1,Ntot)+8];
-%Xp0 = [1.3,2];%[10-Xn0,      3,5,7,3,5,7];%   3;% 4+[3,4];
-%Yp0 = [3.5,3];%[(Yn0-5).*2+5,2,2,2,8,8,8];%   5;% [5,5];
-%length(Xn0)
 
 nNcells=width(Xn0);
 nPcells=width(Xp0);
@@ -71,10 +51,10 @@ x0 = [Xn0,Yn0,Xp0,Yp0];
 
 % Time-span to solve system over
 dt = 1;
-tEnd = 500000;
+tEnd = 100000;
 tspan = 0:dt:tEnd;
 
-figure(6)
+figure(1)
     hold on;
     axis equal;
     % Neural initial positions
@@ -97,7 +77,8 @@ figure(6)
     end
     legend(["NC cells",'P cells'])
     set(gca,'fontsize',10)
-    saveas(gcf,'Fig6F_initial','epsc')
+    fontsize(15,"points")
+    saveas(gcf,'Fig6A_MDPI','epsc')
 
 
 % --- Solving ODE --- %
@@ -140,73 +121,8 @@ std(MINS)
 
 tt = strcat('dt: ',num2str(dt));
 
-figure(1)
-    hold on;
-    axis equal;
-    for i=1:nNcells
-        plot(Xn(:,i), Yn(:,i),'ro');
-    end
-    for i=1:nPcells
-        plot(Xp(:,i), Yp(:,i), 'bo');
-    end
-    set(gca,'fontsize',20)
-    xlabel('x-axis position')
-    ylabel('y-axis position')
-    if not(boundary)
-        pos = [0 0 2*rad 2*rad];
-        rectangle('Position',pos,'Curvature',[1 1]);
-    end
-    set(gca,'fontsize',10)
-    legend(["NC Cells",repelem("",nNcells+1),'P Cells'])
-    saveas(gcf,'Fig6A_tracks','epsc')
-
-% figure(2)
-%  plot(t, FPNS,'k'); 
-%  hold on;
-%  plot(t, FNPS,'b');
-% xlabel('t')
-% ylabel('responses')
-% legend('FPNS', 'FNPS')
 
 figure(2)
- hold on;
- for i=1:nNcells
-  plot(t, Xn(:,i),'r');
- end
- for i=1:nPcells
-  plot(t, Xp(:,i),'b');
- end
-xlabel('t')
-ylabel('x-axis position')
-legend('NC Cells', 'P Cells')
-legend(["NC Cells",repelem("",nNcells+1),'P Cells'])
-saveas(gcf,'Fig6B_xEq','epsc')
-
-figure(3)
- hold on;
- for i=1:nNcells
-  plot(t, Yn(:,i),'r');
- end
- for i=1:nPcells
-  plot(t, Yp(:,i),'b');
- end
-xlabel('Time')
-ylabel('y-axis position')
-legend(["NC Cells",repelem("",nNcells+1),'P Cells'])
-saveas(gcf,'Fig6C_yEq','epsc')
-
-% Optional distance graph -- for when only two cells are involved:
-% dists=sqrt((Xn-Xp).^2+(Yn-Yp).^2);
-
-% figure(4)
-%  hold on;
-%  for i=1:sw
-%   plot(t, dists(:,i),'r');
-%  end
-% xlabel('t')
-% ylabel('dist')
-
-figure(5)
     hold on;
     axis equal;
     for i=1:nNcells
@@ -227,48 +143,8 @@ figure(5)
     end
     set(gca,'fontsize',10)
     legend(["NC Cells",repelem("",nNcells+1),'P Cells'])
-    saveas(gcf,'Fig6D_final','epsc')
-
-figure(7)
-    n = 4;
-    m = 2;
-    tstp=nthroot(tEnd,m*n);%tEnd/m/n;
-    title("Simulation NC cells forming streams that"+ ...
-    "invade surrounding placodes")
-    for i=1:m*n
-        T1 = floor(tstp^i);
-        subplot(m,n,i);
-            hold on;
-            axis equal;
-            for j=1:nNcells
-                plot(Xn(T1,j), Yn(T1,j),'ro');
-            end
-            for j=1:nPcells
-                plot(Xp(T1,j), Yp(T1,j), 'b^');
-            end
-            %plot(Xn(:,nNcells), Yn(:,nNcells),'ro');
-            %plot(Xp(:,nPcells), Yp(:,nPcells), 'bo');
-        
-            set(gca,'fontsize',10)
-            xlabel('x-axis position')
-            ylabel('y-axis position')
-            if not(boundary)
-                pos = [0 0 2*rad 2*rad];
-                rectangle('Position',pos,'Curvature',[1 1]);
-            end
-            set(gca,'fontsize',5)
-            title(strcat('t=',num2str(T1)))
-
-    end
-    saveas(gcf,'Fig6E','epsc')
-
-%contained = 1;
-%for i = 1:nNcells
-%    if ((Xn(i)-(5+XDIST)/2)^2 + (Yn(i)-(5+XDIST)/2)^2 > 1)
-%        contained = 0;
-%    end
-%end
-%contained
+    fontsize(15,"points")
+    saveas(gcf,'Fig6B_MDPI','epsc')
 
 % Finally, save the data to a csv
 
